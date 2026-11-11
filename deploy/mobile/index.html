@@ -601,6 +601,9 @@ function doChoose(p) {
   S.ws.send(JSON.stringify({type: 'choose', player: f.player, index: p.a.index, decision_id: f.decision_id}));
   closeLayer(); render();
 }
+// Some hosts put idle services to sleep and ignore WebSocket traffic; plain HTTP pings keep them awake while a game is open.
+setInterval(() => { if (!$('app').classList.contains('hide')) fetch('/api/status', {cache: 'no-store'}).catch(() => {}); }, 25000);
+
 function connect() {
   if (S.ws) { S.ws.onclose = null; try { S.ws.close(); } catch (_) {} }
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';

@@ -27,6 +27,15 @@ fly deploy --remote-only
 fly scale count 1       # game state is in memory: keep exactly ONE machine
 ```
 
+## Render (free instance)
+
+`render.yaml` is a Blueprint for this branch. In the Render dashboard: New + -> Blueprint
+-> connect GitHub -> pick this repo -> Apply. The container listens on `$PORT`
+(Render sets it); `/healthz` answers 200 without the password. Free instances sleep
+after idle time and restart on the next visit (a new game then starts from the form).
+The open page pings `/api/status` every 25 s so WebSocket-only traffic does not look idle.
+Free instances have little CPU/RAM, so prefer the easy/normal AI levels.
+
 ## Password (recommended)
 
 Without it, anyone who knows the URL can play. To require a login, set a

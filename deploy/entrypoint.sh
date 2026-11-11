@@ -10,7 +10,10 @@ if [ -n "${GAME_PASSWORD:-}" ]; then
 else
   echo "[entrypoint] WARNING: no GAME_PASSWORD set, anyone with the URL can play"
 fi
-sed "s|__AUTH__|$AUTH|" /app/nginx.conf.template > /etc/nginx/nginx.conf
+# Render/other hosts tell us the port via $PORT; Fly uses 8080.
+LISTEN_PORT="${PORT:-8080}"
+echo "[entrypoint] nginx listening on :$LISTEN_PORT"
+sed -e "s|__AUTH__|$AUTH|" -e "s|__PORT__|$LISTEN_PORT|" /app/nginx.conf.template > /etc/nginx/nginx.conf
 
 python3 -u /app/launcher.py &
 LA=$!

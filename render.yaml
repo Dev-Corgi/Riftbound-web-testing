@@ -1,0 +1,14 @@
+# Render Blueprint (https://render.com/docs/blueprint-spec)
+# Dashboard: New + -> Blueprint -> pick this repo/branch. Free instances sleep when idle.
+services:
+  - type: web
+    name: riftbound
+    runtime: docker
+    plan: free
+    branch: claude/local-web-game-access-h0nrmf
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    envVars:
+      # Optional: set a password (login user "player"). Leave empty to skip.
+      - key: GAME_PASSWORD
+        sync: false
