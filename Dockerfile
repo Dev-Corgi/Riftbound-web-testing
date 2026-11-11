@@ -21,7 +21,7 @@ RUN cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
 FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates libboost-program-options1.83.0 libboost-context1.83.0 \
+        ca-certificates nginx-light openssl libboost-program-options1.83.0 libboost-context1.83.0 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -32,12 +32,12 @@ COPY --from=build /src/rules  /app/rules
 COPY --from=build /src/errata /app/errata
 ENV RIFTBOUND_ROOT=/app
 
+COPY deploy/entrypoint.sh /app/entrypoint.sh
+COPY deploy/nginx.conf.template /app/nginx.conf.template
+
+# riftbound listens on 127.0.0.1:8081 (loopback => no access token); nginx
+# listens on 8080 and rewrites Host/Origin. See deploy/entrypoint.sh.
+# God-mode (shows all hands/decks) is off because the port is public.
+# Set the GAME_PASSWORD secret to require a login (user "player").
 EXPOSE 8080
-# Non-loopback bind => the server requires an access token and prints the full
-# URL (with ?token=...) to stdout; read it with `fly logs`.
-# God-mode (shows all hands/decks) is turned off because the port is public.
-# stdbuf -oL: stdout is a pipe on Fly, so without it the token URL stays buffered.
-CMD ["stdbuf", "-oL", "./riftbound", \
-     "--agent1", "human", "--agent2", "mcts:sims=50", \
-     "--deck1", "decks/fiora.txt", "--deck2", "decks/yi_rebuild.txt", \
-     "--bind", "0.0.0.0", "--port", "8080", "--god-mode", "off"]
+CMD ["/app/entrypoint.sh"]

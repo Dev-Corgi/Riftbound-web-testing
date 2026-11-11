@@ -3,39 +3,34 @@
 Packages the [alpharune](https://github.com/chorlick/alpharune) web UI
 (human vs MCTS-50, Fiora vs Yi) as a single Fly machine.
 
+## How it works
+
+`riftbound` rejects any request whose `Host` is not an IP literal or
+`localhost`, and any WebSocket whose `Origin` is not `http://<Host>`. So the
+container runs it on `127.0.0.1:8081` (loopback => no access token) and puts
+nginx on `:8080` in front, rewriting `Host`/`Origin` (`deploy/nginx.conf.template`,
+`deploy/entrypoint.sh`). Open `https://<app>.fly.dev/` directly.
+
 ## Deploy
 
-```bash
-# once: install flyctl and log in
-curl -L https://fly.io/install.sh | sh
-fly auth login
-
-# from the repo root. Edit `app` in fly.toml to a unique name first.
-fly launch --copy-config --no-deploy      # creates the app
-fly deploy --remote-only                  # builds on Fly (~10-20 min first time)
-fly scale count 1                         # game state is in memory: keep ONE machine
-```
-
-## Open the game
-
-The server requires an access token and prints it at startup:
+Fly redeploys from this branch on every push (GitHub integration), or:
 
 ```bash
-fly logs        # look for: → Open http://0.0.0.0:8080/?token=XXXX
+fly deploy --remote-only
+fly scale count 1       # game state is in memory: keep exactly ONE machine
 ```
 
-Open `http://<app>.fly.dev/?token=XXXX` — replace `0.0.0.0:8080` with your
-app's host and **use `http://`, not `https://`**: the server only accepts a
-WebSocket whose `Origin` is `http://<Host>`, so an HTTPS page is rejected.
-(`force_https` is therefore off in `fly.toml`.)
+## Password (recommended)
+
+Without it, anyone who knows the URL can play. To require a login, set a
+Fly secret (dashboard: app -> Secrets, or `fly secrets set GAME_PASSWORD=...`);
+the browser then asks for user `player` and that password.
 
 ## Caveats
 
-- Anyone with the token URL can play. God-mode is off, so hands stay hidden.
-- One game per process. When it ends the process exits and Fly restarts it,
-  which prints a **new token** (check `fly logs` again).
-- Traffic is unencrypted (http). Fine for a test; for real use, patch the
-  Origin check upstream and enable HTTPS.
-- Not built or deployed from the authoring environment (no Docker daemon,
-  no Fly access). Verified locally: binary + `cards decks rules errata`,
-  `--bind 0.0.0.0` returns 403 without the token and 200 with it.
+- One game per process. When the game ends the process exits and Fly restarts it.
+- God-mode (shows all hands/decks) is forced off.
+- Verified locally with the same layout: HTTP 200 with `Host: <app>.fly.dev`,
+  a WebSocket with `Origin: https://<app>.fly.dev` opens, and with
+  `GAME_PASSWORD` set requests get 401 without credentials and 200 with them.
+  The Docker image itself was not built from the authoring environment.

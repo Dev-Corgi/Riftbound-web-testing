@@ -11,6 +11,8 @@ primary_region = 'ams'
 
 [http_service]
   internal_port = 8080
+  # nginx in the container rewrites Host/Origin, so https:// works.
+  force_https = true
   auto_stop_machines = 'off'
   auto_start_machines = false
   min_machines_running = 1
