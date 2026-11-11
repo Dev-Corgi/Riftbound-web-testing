@@ -34,6 +34,8 @@ ENV RIFTBOUND_ROOT=/app
 
 COPY deploy/entrypoint.sh /app/entrypoint.sh
 COPY deploy/nginx.conf.template /app/nginx.conf.template
+COPY deploy/rb_proxy.conf /etc/nginx/rb_proxy.conf
+COPY deploy/mobile /app/mobile
 
 # riftbound listens on 127.0.0.1:8081 (loopback => no access token); nginx
 # listens on 8080 and rewrites Host/Origin. See deploy/entrypoint.sh.
