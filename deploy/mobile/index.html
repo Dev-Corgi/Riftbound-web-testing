@@ -78,19 +78,24 @@ button{font:inherit;color:inherit}
 .lane.empty::after{content:"";}
 .lane .none{color:#59628a;font-size:11px;padding-left:4px}
 
-.bfs{flex:1 0 auto;display:flex;flex-direction:column;gap:6px}
-.bf{flex:1;min-height:0;position:relative;border-radius:10px;border:1px solid var(--line);overflow:hidden;display:flex;flex-direction:column;padding:4px 7px}
+.bfs{flex:1 0 auto;display:flex;flex-direction:row;gap:6px;min-height:200px}
+.bf{flex:1 1 0;min-width:0;min-height:0;position:relative;border-radius:10px;border:1px solid var(--line);overflow:hidden;display:flex;flex-direction:column;padding:4px 7px}
 .bf::before{content:"";position:absolute;inset:0;background:var(--bgimg,none) center/cover;opacity:.28;z-index:0}
 .bf>*{position:relative;z-index:1}
 .bf.c-me{border-color:var(--me);box-shadow:0 0 0 1px #4fa3ff55 inset}
 .bf.c-foe{border-color:var(--foe);box-shadow:0 0 0 1px #ff6f7d55 inset}
-.bfh{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;text-shadow:0 1px 3px #000}
-.bfh .tag{font-size:10.5px;padding:0 6px;border-radius:999px;background:#000a}
+.bfh{display:flex;justify-content:space-between;align-items:center;gap:4px;padding-left:26px;min-height:22px;font-size:12px;font-weight:700;text-shadow:0 1px 3px #000}
+.bfh .bn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bfh .tag{flex:none;font-size:10px;padding:0 6px;border-radius:999px;background:#000a}
 .bfh .tag.me{color:var(--me)} .bfh .tag.foe{color:var(--foe)} .bfh .tag.none{color:var(--mut)}
-.bf{--uw:42px;min-height:96px;flex:1 1 0}
-.bf .lanes{display:flex;gap:8px;flex:1;min-height:0}
+.bf{--uw:44px;padding:4px 6px}
+.bf .lanes{display:flex;flex-direction:column;gap:3px;flex:1;min-height:0}
 .bf .lane{flex:1;min-width:0;min-height:calc(var(--uw)*1.4 + 4px)}
-.bf .lane+.lane{border-left:1px dashed #ffffff30;padding-left:8px}
+.bf .lane+.lane{border-top:1px dashed #ffffff30}
+.mag{position:absolute;top:4px;left:4px;z-index:3;width:22px;height:22px;padding:0;border-radius:50%;border:1px solid #ffffff55;background:#000b;color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.mag:active{background:#333c}
+.eff{margin-top:8px;padding:8px 10px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;font-size:13px;line-height:1.45;white-space:pre-line}
+.bfimg{display:block;width:100%;max-height:34dvh;object-fit:contain;border-radius:10px;margin-bottom:6px;cursor:zoom-in}
 .resrow{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:3px 0}
 .side .lane{--uw:44px}
 
@@ -354,6 +359,7 @@ function render() {
   renderBar(f, m);
   if (S.over) { if (!S.overShown) showOver(); else closeLayer(); }
   else if (S.sel) openCard(S.sel, true);
+  else if (S.bfSel) openBf(S.bfSel);
   else if (S.sheet === 'all') openAll(m, true);
   else if (m.mode === 'choice' && S.sheet !== 'closed') openChoice(m);
   else closeLayer();
@@ -409,11 +415,14 @@ function bfsEl(f, m) {
   const me = S.me, wrap = h('div', {class: 'bfs'});
   for (const b of (f.battlefields || [])) {
     const cls = b.controller === 'none' ? 'none' : (b.controller === me ? 'me' : 'foe');
-    const lab = cls === 'none' ? '미점령' : cls === 'me' ? '내가 점령' : '상대 점령';
+    const lab = cls === 'none' ? '미점령' : cls === 'me' ? '내 점령' : '상대 점령';
     const el = h('div', {class: 'bf c-' + cls});
     const img = imgFor(b.name.replace(/\s*\(.*\)$/, ''));
     if (img) el.style.setProperty('--bgimg', 'url("' + img + '")');
-    el.append(h('div', {class: 'bfh'}, h('span', {}, b.name), h('span', {class: 'tag ' + cls}, lab)));
+    const mag = h('button', {class: 'mag', title: '전장 효과 보기', 'aria-label': '전장 효과 보기',
+      onclick: e => { e.stopPropagation(); S.sel = null; S.bfSel = b.name; openBf(b.name); }});
+    mag.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.6 15.6 21 21"/></svg>';
+    el.append(mag, h('div', {class: 'bfh'}, h('span', {class: 'bn'}, b.name), h('span', {class: 'tag ' + cls}, lab)));
     const lanes = h('div', {class: 'lanes'});
     for (const mineRow of [false, true]) {
       const units = (b.units || []).filter(u => (u.controller === me) === mineRow);
@@ -456,6 +465,20 @@ function renderBar(f, m) {
 }
 const barLabel = p => ({EndTurn: '턴 종료', PassPriority: '패스', PassFocus: '패스'}[p.kind] || pretty(p.label));
 
+// ───────── card effect text (from the launcher) ─────────
+const INFO = new Map();
+function effectInto(el, name) {
+  const key = name.replace(/\s*\(.*\)$/, '').replace(/\s*#\d+$/, '');
+  const show = i => {
+    const meta = i ? [(i.types || []).join('/'), i.energy != null ? '비용 ' + i.energy : null, i.might != null ? 'Might ' + i.might : null].filter(Boolean).join(' · ') : '';
+    el.textContent = i ? (meta ? meta + '\n' : '') + (i.text || '효과 설명이 없어요') : '효과 설명을 찾지 못했어요';
+  };
+  if (INFO.has(key)) return show(INFO.get(key));
+  el.textContent = '불러오는 중…';
+  fetch('/api/card?name=' + encodeURIComponent(key)).then(r => (r.ok ? r.json() : null)).catch(() => null)
+    .then(i => { INFO.set(key, i); show(i); });
+}
+
 // ───────── layers (sheets) ─────────
 function layer(content, opts = {}) {
   const l = $('layer');
@@ -464,7 +487,7 @@ function layer(content, opts = {}) {
   }}, content));
 }
 function closeLayer() { $('layer').replaceChildren(); }
-function closeAndRender() { S.sel = null; S.sheet = S.model && S.model.mode === 'choice' ? 'closed' : null; closeLayer(); render(); }
+function closeAndRender() { S.sel = null; S.bfSel = null; S.sheet = S.model && S.model.mode === 'choice' ? 'closed' : null; closeLayer(); render(); }
 
 function actLabel(p) {
   switch (p.kind) {
@@ -489,10 +512,23 @@ function openCard(o, silent) {
   const live = o.id != null ? m.idx.get(o.id) || o : o;
   const stats = [live.might ? 'Might ' + live.might : null, live.damage ? '피해 ' + live.damage : null, live.exhausted ? '탭됨(사용함)' : null].filter(Boolean).join(' · ');
   const ci = h('div', {class: 'c big', onclick: () => zoom(o)}, url ? h('img', {src: url, alt: o.name}) : h('span', {class: 'nm'}, o.name));
+  const effEl = h('div', {class: 'eff'});
   layer(h('div', {class: 'sheet'},
     h('div', {class: 'cardrow'}, ci, h('div', {class: 'info'}, h('b', {}, o.name), h('div', {}, stats || ' '),
       h('div', {}, acts.length ? '할 수 있는 행동 ' + acts.length + '개' : '지금은 할 수 있는 행동이 없어요'), h('div', {}, '카드를 누르면 크게 볼 수 있어요'))),
-    h('div', {class: 'acts'}, acts.map(p => actBtn(p)))), {});
+    effEl, h('div', {class: 'acts', style: 'margin-top:10px'}, acts.map(p => actBtn(p)))), {});
+  effectInto(effEl, o.name);
+}
+function openBf(name) {
+  const base = name.replace(/\s*\(.*\)$/, ''), url = imgFor(base), eff = h('div', {class: 'eff'});
+  const im = url && h('img', {class: 'bfimg', src: url, alt: base, onclick: () => zoomBf(base)});
+  if (im) im.addEventListener('error', () => im.remove());
+  layer(h('div', {class: 'sheet'}, h('h3', {}, name), im, eff), {});
+  effectInto(eff, name);
+}
+function zoomBf(base) {
+  layer(h('div', {class: 'zoom', style: 'display:flex;width:100%'}, h('img', {src: imgFor(base), alt: base}), h('div', {style: 'font-weight:700'}, base)),
+    {center: true, onclose: () => openBf(S.bfSel || base)});
 }
 function zoom(o) {
   const url = imgFor(o.name);

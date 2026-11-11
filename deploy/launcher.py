@@ -7,11 +7,13 @@ forwards /api/* here:
 
   GET  /api/decks   [{id, legend, champion}]
   GET  /api/images  {card name: image url}      (from cards/raw/gallery_raw.json)
+  GET  /api/card?name=  {name, subtitle, types, energy, might, text}  (effect text)
   GET  /api/status  {state: idle|running, config, error}
   POST /api/start   {deck1, deck2, level}        -> (re)starts the game
 """
 import collections
 import glob
+import html
 import http.server
 import json
 import os
@@ -21,6 +23,7 @@ import socket
 import subprocess
 import threading
 import time
+import urllib.parse
 
 ROOT = os.environ.get("RIFTBOUND_ROOT", "/app")
 GAME_PORT = int(os.environ.get("GAME_PORT", "8081"))
@@ -88,6 +91,50 @@ def load_images():
     return out
 
 
+_ICON = {"might": "Might", "exhaust": "탭", "rune_rainbow": "아무 색 룬"}
+
+
+def _icon(m):
+    t = m.group(1)
+    if t in _ICON:
+        return _ICON[t]
+    if t.startswith("rune_"):
+        return t[5:].capitalize() + " 룬"
+    if t.startswith("energy_"):
+        return t[7:] + " 에너지"
+    return ""
+
+
+def plain(body):
+    body = re.sub(r"<br\s*/?>|</p>|</li>", "\n", body or "")
+    body = re.sub(r"<[^>]+>", "", body)
+    body = re.sub(r":rb_([a-z0-9_]+):", _icon, html.unescape(body))
+    return re.sub(r"[ \t]+", " ", re.sub(r"\n\s*\n+", "\n", body)).strip()
+
+
+def load_cards():
+    out = {}
+    try:
+        with open(os.path.join(ROOT, "cards", "raw", "gallery_raw.json"), encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return out
+    val = lambda d: ((d or {}).get("value") or {}).get("label")
+    for c in data:
+        name = c.get("name")
+        if not name:
+            continue
+        info = {"name": name, "subtitle": c.get("subtitle"),
+                "types": [t.get("label") for t in (c.get("cardType") or {}).get("type", [])],
+                "energy": val(c.get("energy")), "might": val(c.get("might")),
+                "text": plain(((c.get("text") or {}).get("richText") or {}).get("body"))}
+        sub = c.get("subtitle")
+        for key in ((f"{name}, {sub}",) if sub else ()) + (name,):
+            out.setdefault(key, info)
+    return out
+
+
+CARDS = load_cards()
 IMAGES_JSON = json.dumps(load_images(), separators=(",", ":")).encode()
 
 
@@ -179,6 +226,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_json(DECKS, cache="max-age=3600")
         elif path == "/api/images":
             self.send_json(IMAGES_JSON, cache="max-age=3600")
+        elif path == "/api/card":
+            q = urllib.parse.parse_qs(self.path.partition("?")[2])
+            name = (q.get("name") or [""])[0]
+            name = re.sub(r"\s*\(.*\)$", "", name)  # "Sunken Temple (P1's)"
+            name = re.sub(r"\s*#\d+$", "", name)
+            info = CARDS.get(name) or (CARDS.get(name.split(", ", 1)[1]) if ", " in name else None)
+            self.send_json(info or {"error": "not found"}, 200 if info else 404, cache="max-age=3600")
         elif path == "/api/status":
             running = alive() and port_open()
             self.send_json({"state": "running" if running else "idle",
