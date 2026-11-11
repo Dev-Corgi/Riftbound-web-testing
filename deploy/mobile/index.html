@@ -11,7 +11,7 @@
   --bg:#0b0d14; --bg2:#121623; --panel:#171c2c; --panel2:#1e2438; --line:#2b3350;
   --text:#eceff7; --mut:#8f98b3; --gold:#e6b85c; --me:#4fa3ff; --foe:#ff6f7d; --ok:#4fe0a0; --warn:#ffcb5c;
   --uw:50px;            /* unit card width on the board */
-  --hw:80px;            /* hand card width */
+  --hw:74px;            /* hand card width */
   --safe-b:env(safe-area-inset-bottom,0px);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
@@ -40,7 +40,7 @@ button{font:inherit;color:inherit}
 .c.mull{opacity:.6;transform:translateY(8px) rotate(-3deg);border-color:var(--foe)}
 .c .cnt{position:absolute;top:2px;left:2px;min-width:16px;height:16px;border-radius:8px;background:var(--ok);color:#06231a;font-size:10px;font-weight:800;text-align:center;line-height:16px}
 @keyframes glow{50%{box-shadow:0 0 0 1px var(--ok),0 0 18px 4px #4fe0a099}}
-.back{flex:none;width:22px;aspect-ratio:744/1039;border-radius:3px;border:1px solid #4a5480;margin-left:-10px;
+.back{flex:none;width:17px;aspect-ratio:744/1039;border-radius:3px;border:1px solid #4a5480;margin-left:-8px;
   background:repeating-linear-gradient(45deg,#2c3868,#2c3868 4px,#222b52 4px,#222b52 8px)}
 .back:first-child{margin-left:0}
 
@@ -54,9 +54,9 @@ button{font:inherit;color:inherit}
 .turn .who-me{color:var(--me)} .turn .who-foe{color:var(--foe)}
 .ibtn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:4px 10px;cursor:pointer}
 
-.board{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;padding:6px 8px;
+.board{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:6px 8px;
   background:radial-gradient(120% 80% at 50% 50%,#161c33 0%,var(--bg) 70%)}
-.side{background:#ffffff08;border:1px solid var(--line);border-radius:10px;padding:5px 7px}
+.side{flex:none;background:#ffffff08;border:1px solid var(--line);border-radius:10px;padding:5px 7px}
 .band{display:flex;align-items:center;gap:8px;margin-bottom:4px}
 .pic{display:flex;gap:4px;flex:none}
 .pic .c{width:30px;border-radius:4px}
@@ -68,7 +68,7 @@ button{font:inherit;color:inherit}
 .bar8 i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),#ffdb94)}
 .pip span{font-size:12px;font-weight:800;color:var(--gold);min-width:30px;text-align:right}
 .res{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;max-width:46%}
-.chip{font-size:11px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:1px 7px;color:var(--mut);white-space:nowrap}
+.chip{font-size:10.5px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:0 6px;color:var(--mut);white-space:nowrap}
 .chip b{color:var(--text)}
 .runes{display:flex;gap:3px;align-items:center}
 .rune{width:13px;height:13px;border-radius:50%;border:1px solid #0008;flex:none}
@@ -78,7 +78,7 @@ button{font:inherit;color:inherit}
 .lane.empty::after{content:"";}
 .lane .none{color:#59628a;font-size:11px;padding-left:4px}
 
-.bfs{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px}
+.bfs{flex:1 0 auto;display:flex;flex-direction:column;gap:6px}
 .bf{flex:1;min-height:0;position:relative;border-radius:10px;border:1px solid var(--line);overflow:hidden;display:flex;flex-direction:column;padding:4px 7px}
 .bf::before{content:"";position:absolute;inset:0;background:var(--bgimg,none) center/cover;opacity:.28;z-index:0}
 .bf>*{position:relative;z-index:1}
@@ -87,8 +87,12 @@ button{font:inherit;color:inherit}
 .bfh{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;text-shadow:0 1px 3px #000}
 .bfh .tag{font-size:10.5px;padding:0 6px;border-radius:999px;background:#000a}
 .bfh .tag.me{color:var(--me)} .bfh .tag.foe{color:var(--foe)} .bfh .tag.none{color:var(--mut)}
-.bf .lane{flex:1;min-height:0}
-.bf .lane+.lane{border-top:1px dashed #ffffff22}
+.bf{--uw:42px;min-height:96px;flex:1 1 0}
+.bf .lanes{display:flex;gap:8px;flex:1;min-height:0}
+.bf .lane{flex:1;min-width:0;min-height:calc(var(--uw)*1.4 + 4px)}
+.bf .lane+.lane{border-left:1px dashed #ffffff30;padding-left:8px}
+.resrow{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:3px 0}
+.side .lane{--uw:44px}
 
 .hand{display:flex;align-items:flex-end;padding:12px 14px 6px;overflow-x:auto;min-height:calc(var(--hw)*1.4 + 20px);background:linear-gradient(transparent,#0b0d14 40%);scrollbar-width:none}
 .hand::-webkit-scrollbar{display:none}
@@ -374,13 +378,13 @@ function sideEl(f, m, who, mine) {
       h('div', {class: 'pname ' + (mine ? 'me' : 'foe')}, mine ? '나' : '상대', ' ',
         h('span', {style: 'color:var(--mut);font-weight:500;font-size:11px'}, dk ? dk.champion : who)),
       h('div', {class: 'pip'}, h('div', {class: 'bar8'}, h('i', {style: 'width:' + Math.min(100, score / goal * 100) + '%'})),
-        h('span', {}, score + '/' + goal))),
-    h('div', {class: 'res'},
-      mine ? chip('손패', z.hand_count ?? (z.hand || []).length) : backs(z.hand_count ?? 0),
-      chip('덱', z.main_deck_count ?? '?'), chip('E', z.energy ?? 0), chip('P', z.power_total ?? 0)));
-  const rn = h('div', {class: 'runes'}, runes.map(r => h('span', {class: 'rune' + (r.exhausted ? ' ex' : ''),
-    title: r.name, style: 'background:' + (RUNE_COLOR[r.name.replace(/ Rune$/, '')] || '#8f98b3')})),
-    chip('룬덱', z.rune_deck_count ?? '?'));
+        h('span', {}, score + '/' + goal))));
+  const rn = h('div', {class: 'resrow'},
+    mine ? chip('손패', z.hand_count ?? (z.hand || []).length) : backs(z.hand_count ?? 0),
+    chip('덱', z.main_deck_count ?? '?'), chip('E', z.energy ?? 0), chip('P', z.power_total ?? 0),
+    h('span', {class: 'runes'}, runes.map(r => h('span', {class: 'rune' + (r.exhausted ? ' ex' : ''),
+      title: r.name, style: 'background:' + (RUNE_COLOR[r.name.replace(/ Rune$/, '')] || '#8f98b3')})),
+      chip('룬덱', z.rune_deck_count ?? '?')));
   const lane = h('div', {class: 'lane' + (units.length ? '' : ' empty'), 'data-k': 'base-' + who});
   if (!units.length) lane.append(h('span', {class: 'none'}, '기지에 유닛 없음'));
   for (const o of units) {
@@ -389,8 +393,8 @@ function sideEl(f, m, who, mine) {
       sel: S.sel && S.sel.id === o.id}));
   }
   const side = h('div', {class: 'side'});
-  if (mine) side.append(lane, h('div', {style: 'display:flex;justify-content:space-between;align-items:center;margin:2px 0 4px'}, rn), band);
-  else side.append(band, h('div', {style: 'display:flex;margin-bottom:2px'}, rn), lane);
+  if (mine) side.append(lane, rn, band);
+  else side.append(band, rn, lane);
   return side;
 }
 function chip(k, v) { return h('span', {class: 'chip'}, k + ' ', h('b', {}, v)); }
@@ -410,16 +414,18 @@ function bfsEl(f, m) {
     const img = imgFor(b.name.replace(/\s*\(.*\)$/, ''));
     if (img) el.style.setProperty('--bgimg', 'url("' + img + '")');
     el.append(h('div', {class: 'bfh'}, h('span', {}, b.name), h('span', {class: 'tag ' + cls}, lab)));
+    const lanes = h('div', {class: 'lanes'});
     for (const mineRow of [false, true]) {
       const units = (b.units || []).filter(u => (u.controller === me) === mineRow);
       const lane = h('div', {class: 'lane', 'data-k': 'bf' + b.id + (mineRow ? 'm' : 'f')});
-      if (!units.length) lane.append(h('span', {class: 'none'}, mineRow ? '내 유닛 없음' : '상대 유닛 없음'));
+      if (!units.length) lane.append(h('span', {class: 'none'}, mineRow ? '나' : '상대'));
       for (const o of units) {
         const acts = mineRow ? (m.byObj.get(o.id) || []) : [];
         lane.append(cardEl(o, {can: acts.length > 0, side: mineRow ? 'mine' : 'foe', count: acts.length}));
       }
-      el.append(lane);
+      lanes.append(lane);
     }
+    el.append(lanes);
     wrap.append(el);
   }
   return wrap;
