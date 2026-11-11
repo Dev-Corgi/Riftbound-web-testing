@@ -2,319 +2,653 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0b0d14">
 <title>Riftbound</title>
 <style>
 :root{
-  --bg:#0e0f13; --panel:#171922; --panel2:#20232f; --line:#2c3040;
-  --text:#e9ebf1; --mut:#98a0b3; --me:#5aa9ff; --foe:#ff7f7f; --ok:#58d39b; --warn:#ffc857;
+  --bg:#0b0d14; --bg2:#121623; --panel:#171c2c; --panel2:#1e2438; --line:#2b3350;
+  --text:#eceff7; --mut:#8f98b3; --gold:#e6b85c; --me:#4fa3ff; --foe:#ff6f7d; --ok:#4fe0a0; --warn:#ffcb5c;
+  --uw:50px;            /* unit card width on the board */
+  --hw:80px;            /* hand card width */
   --safe-b:env(safe-area-inset-bottom,0px);
 }
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
-  font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);overflow:hidden;
+  font:14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif}
+button{font:inherit;color:inherit}
+.hide{display:none!important}
+
+/* ───────── cards ───────── */
+.c{position:relative;flex:none;width:var(--uw);aspect-ratio:744/1039;border-radius:6px;overflow:hidden;
+  background:linear-gradient(160deg,#2a3354,#171c2c);border:1px solid #39426a;cursor:pointer;transition:transform .12s,box-shadow .12s}
+.c img{display:block;width:100%;height:100%;object-fit:cover}
+.c .nm{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:3px;text-align:center;
+  font-size:9px;line-height:1.1;font-weight:600;word-break:keep-all}
+.c.big{width:var(--hw)}
+.c.big .nm{font-size:11px}
+.c .mt,.c .dm{position:absolute;min-width:17px;height:17px;padding:0 4px;border-radius:9px;font-size:10px;font-weight:800;line-height:16px;text-align:center;
+  background:#0b0d14e6;border:1px solid #4a5480}
+.c .mt{left:2px;bottom:2px;color:var(--warn)}
+.c .dm{right:2px;top:2px;color:var(--foe)}
+.c.ex{filter:grayscale(.55) brightness(.7);transform:rotate(7deg) scale(.94)}
+.c.mine{border-color:#3d79bd}
+.c.foe{border-color:#b5515c}
+.c.can{border-color:var(--ok);box-shadow:0 0 0 1px var(--ok),0 0 12px 2px #4fe0a066;animation:glow 1.8s ease-in-out infinite}
+.c.sel{transform:translateY(-10px);border-color:var(--gold);box-shadow:0 0 0 2px var(--gold)}
+.c.mull{opacity:.6;transform:translateY(8px) rotate(-3deg);border-color:var(--foe)}
+.c .cnt{position:absolute;top:2px;left:2px;min-width:16px;height:16px;border-radius:8px;background:var(--ok);color:#06231a;font-size:10px;font-weight:800;text-align:center;line-height:16px}
+@keyframes glow{50%{box-shadow:0 0 0 1px var(--ok),0 0 18px 4px #4fe0a099}}
+.back{flex:none;width:22px;aspect-ratio:744/1039;border-radius:3px;border:1px solid #4a5480;margin-left:-10px;
+  background:repeating-linear-gradient(45deg,#2c3868,#2c3868 4px,#222b52 4px,#222b52 8px)}
+.back:first-child{margin-left:0}
+
+/* ───────── layout ───────── */
 #app{display:flex;flex-direction:column;height:100dvh}
-header{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
-#dot{width:10px;height:10px;border-radius:50%;background:var(--warn);flex:none}
-#dot.on{background:var(--ok)}
-#turn{flex:1;min-width:0;font-size:13px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#score{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
-#score .me{color:var(--me)} #score .foe{color:var(--foe)}
-main{flex:1;overflow-y:auto;padding:10px 12px 14px;-webkit-overflow-scrolling:touch}
-section{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:10px}
-.sec-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;font-weight:700;font-size:14px}
-.sec-h .tag{font-weight:500;font-size:12px;color:var(--mut)}
-.foe-h{color:var(--foe)} .me-h{color:var(--me)}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
-.chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:12px;color:var(--mut)}
-.chip b{color:var(--text);font-weight:600}
-.row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;min-height:26px}
-.row.empty::after{content:"—";color:var(--mut);font-size:12px;align-self:center}
-.bf{border:1px dashed var(--line);border-radius:10px;padding:8px;margin-bottom:8px}
-.bf:last-child{margin-bottom:0}
-.bf-h{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
-.ctl-me{color:var(--me)} .ctl-foe{color:var(--foe)} .ctl-none{color:var(--mut)}
-.lane{display:flex;align-items:flex-start;gap:8px;margin:4px 0}
-.lane-l{flex:none;width:34px;font-size:11px;color:var(--mut);padding-top:4px}
-.lane .row{flex:1;min-width:0}
+.top{display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--bg2);border-bottom:1px solid var(--line);min-height:40px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--warn);flex:none}
+.dot.on{background:var(--ok)}
+.turn{flex:1;min-width:0;font-size:12.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.turn b{color:var(--text)}
+.turn .who-me{color:var(--me)} .turn .who-foe{color:var(--foe)}
+.ibtn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:4px 10px;cursor:pointer}
 
-.card{position:relative;flex:none;width:76px;border-radius:7px;overflow:hidden;background:var(--panel2);
-  border:1px solid var(--line);cursor:pointer;aspect-ratio:744/1039}
-.card.big{width:96px}
-.card img{display:block;width:100%;height:100%;object-fit:cover}
-.card .nm{position:absolute;inset:auto 0 0 0;padding:14px 4px 3px;font-size:10px;line-height:1.15;text-align:center;
-  background:linear-gradient(transparent,rgba(0,0,0,.85));word-break:keep-all}
-.card.noimg .nm{position:static;padding:8px 4px;background:none;font-size:11px}
-.card.noimg{aspect-ratio:auto;min-height:90px;display:flex;align-items:center;justify-content:center}
-.card.ex{opacity:.5;filter:grayscale(.5)}
-.card .b{position:absolute;top:3px;font-size:11px;font-weight:700;border-radius:999px;padding:0 6px;line-height:17px;background:rgba(0,0,0,.78);border:1px solid var(--line)}
-.card .might{left:3px;color:var(--warn)} .card .dmg{right:3px;color:var(--foe)}
-.card .exh{position:absolute;left:3px;bottom:22px;font-size:10px;background:rgba(0,0,0,.78);border-radius:4px;padding:0 4px;color:var(--mut)}
-.deco-me{border-color:var(--me)} .deco-foe{border-color:var(--foe)}
+.board{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;padding:6px 8px;
+  background:radial-gradient(120% 80% at 50% 50%,#161c33 0%,var(--bg) 70%)}
+.side{background:#ffffff08;border:1px solid var(--line);border-radius:10px;padding:5px 7px}
+.band{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.pic{display:flex;gap:4px;flex:none}
+.pic .c{width:30px;border-radius:4px}
+.nameblk{flex:1;min-width:0}
+.pname{font-weight:800;font-size:13px}
+.pname.me{color:var(--me)} .pname.foe{color:var(--foe)}
+.pip{display:flex;align-items:center;gap:6px;margin-top:2px}
+.bar8{flex:1;height:6px;border-radius:3px;background:#0b0d14;border:1px solid var(--line);overflow:hidden}
+.bar8 i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),#ffdb94)}
+.pip span{font-size:12px;font-weight:800;color:var(--gold);min-width:30px;text-align:right}
+.res{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;max-width:46%}
+.chip{font-size:11px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:1px 7px;color:var(--mut);white-space:nowrap}
+.chip b{color:var(--text)}
+.runes{display:flex;gap:3px;align-items:center}
+.rune{width:13px;height:13px;border-radius:50%;border:1px solid #0008;flex:none}
+.rune.ex{opacity:.3}
+.lane{display:flex;gap:5px;overflow-x:auto;min-height:calc(var(--uw)*1.4 + 4px);align-items:center;padding:2px 0;scrollbar-width:none}
+.lane::-webkit-scrollbar{display:none}
+.lane.empty::after{content:"";}
+.lane .none{color:#59628a;font-size:11px;padding-left:4px}
 
-details{margin-top:2px}
-summary{cursor:pointer;color:var(--mut);font-size:13px;padding:4px 0}
-pre{margin:6px 0 0;overflow-x:auto;font:11px/1.25 ui-monospace,Menlo,Consolas,monospace;color:#cfd3df}
+.bfs{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px}
+.bf{flex:1;min-height:0;position:relative;border-radius:10px;border:1px solid var(--line);overflow:hidden;display:flex;flex-direction:column;padding:4px 7px}
+.bf::before{content:"";position:absolute;inset:0;background:var(--bgimg,none) center/cover;opacity:.28;z-index:0}
+.bf>*{position:relative;z-index:1}
+.bf.c-me{border-color:var(--me);box-shadow:0 0 0 1px #4fa3ff55 inset}
+.bf.c-foe{border-color:var(--foe);box-shadow:0 0 0 1px #ff6f7d55 inset}
+.bfh{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;text-shadow:0 1px 3px #000}
+.bfh .tag{font-size:10.5px;padding:0 6px;border-radius:999px;background:#000a}
+.bfh .tag.me{color:var(--me)} .bfh .tag.foe{color:var(--foe)} .bfh .tag.none{color:var(--mut)}
+.bf .lane{flex:1;min-height:0}
+.bf .lane+.lane{border-top:1px dashed #ffffff22}
 
-footer{background:var(--panel);border-top:1px solid var(--line);padding:8px 12px calc(8px + var(--safe-b));max-height:40dvh;overflow-y:auto}
-#status{font-size:13px;color:var(--mut);margin-bottom:6px}
-#status.me{color:var(--ok);font-weight:700}
-#prompt{font-size:14px;margin:0 0 8px;padding:8px;border-left:3px solid var(--warn);background:var(--panel2);border-radius:6px}
-#acts{display:flex;flex-direction:column;gap:6px}
-.act{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:6px 10px;text-align:left;
-  color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:10px;font:inherit;cursor:pointer}
-.act:active{background:#2a3042}
-.act[disabled]{opacity:.45}
-.act.end{border-color:var(--warn)}
-.act img{width:30px;height:42px;object-fit:cover;border-radius:3px;flex:none}
-.act .t{flex:1;min-width:0;word-break:break-word}
-.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--mut);border-top-color:transparent;border-radius:50%;
-  animation:sp 0.8s linear infinite;vertical-align:-2px;margin-right:6px}
+.hand{display:flex;align-items:flex-end;padding:12px 14px 6px;overflow-x:auto;min-height:calc(var(--hw)*1.4 + 20px);background:linear-gradient(transparent,#0b0d14 40%);scrollbar-width:none}
+.hand::-webkit-scrollbar{display:none}
+.hand .c{margin-right:-16px}
+.hand .c:last-child{margin-right:0}
+.hand .c.can,.hand .c.sel{margin-bottom:6px}
+.hand .empty{color:var(--mut);font-size:12px;margin:auto}
+
+.actbar{display:flex;gap:8px;padding:8px 10px calc(8px + var(--safe-b));background:var(--bg2);border-top:1px solid var(--line);align-items:center}
+.status{flex:1;min-width:0;font-size:12.5px;color:var(--mut)}
+.status.go{color:var(--ok);font-weight:700}
+.btn{min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);font-weight:700;cursor:pointer}
+.btn:active{filter:brightness(1.25)}
+.btn.pri{background:linear-gradient(180deg,#f0c56d,#cf9a2f);color:#241a05;border-color:#f0c56d}
+.btn.go{background:linear-gradient(180deg,#52e2a3,#2bb67a);color:#04281a;border-color:#52e2a3}
+.btn[disabled]{opacity:.45}
+.spin{display:inline-block;width:11px;height:11px;border:2px solid var(--mut);border-top-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:6px}
 @keyframes sp{to{transform:rotate(360deg)}}
-.banner{padding:12px;border-radius:10px;text-align:center;font-weight:800;font-size:18px;margin-bottom:8px}
-.banner.win{background:#16382a;color:var(--ok)} .banner.lose{background:#3a1c1c;color:var(--foe)}
 
-#modal{position:fixed;inset:0;background:rgba(0,0,0,.86);display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:9;padding:16px}
-#modal.show{display:flex}
-#modal img{max-width:92vw;max-height:76dvh;border-radius:12px}
-#modal .cap{font-weight:700} #modal small{color:var(--mut)}
-#toast{position:fixed;left:50%;top:56px;transform:translateX(-50%);background:#3a1c1c;color:#ffd0d0;border:1px solid var(--foe);
-  padding:6px 12px;border-radius:8px;font-size:13px;display:none;z-index:10;max-width:90vw}
-a.classic{color:var(--mut);font-size:12px}
+/* ───────── sheets & overlays ───────── */
+.shade{position:fixed;inset:0;background:#000b;z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.shade.center{align-items:center}
+.sheet{width:100%;max-width:560px;max-height:78dvh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-bottom:0;
+  border-radius:16px 16px 0 0;padding:14px 14px calc(14px + var(--safe-b))}
+.sheet h3{margin:0 0 10px;font-size:15px}
+.cardrow{display:flex;gap:12px;margin-bottom:12px}
+.cardrow .c{width:104px;cursor:zoom-in}
+.cardrow .info{flex:1;min-width:0}
+.cardrow .info b{font-size:15px}
+.cardrow .info div{color:var(--mut);font-size:12.5px;margin-top:3px}
+.acts{display:flex;flex-direction:column;gap:7px}
+.act{display:flex;align-items:center;gap:10px;width:100%;min-height:46px;padding:6px 12px;text-align:left;background:var(--panel2);
+  border:1px solid var(--line);border-radius:10px;cursor:pointer}
+.act:active{background:#2a3350}
+.act.end{border-color:var(--gold)}
+.act img{width:28px;height:39px;object-fit:cover;border-radius:3px;flex:none}
+.act small{display:block;color:var(--mut);font-size:11px}
+.prompt{padding:8px 10px;border-left:3px solid var(--warn);background:var(--panel2);border-radius:6px;margin-bottom:10px}
+.zoom{flex-direction:column;gap:10px;align-items:center;justify-content:center;padding:14px}
+.zoom img{max-width:90vw;max-height:78dvh;border-radius:14px}
+.msg{padding:18px;border-radius:16px;background:var(--panel);border:1px solid var(--line);text-align:center;max-width:340px;margin:auto}
+.msg h2{margin:0 0 6px;font-size:26px}
+.msg.win h2{color:var(--ok)} .msg.lose h2{color:var(--foe)}
+.msg .btn{margin:6px 4px 0}
+.toast{position:fixed;left:50%;top:48px;transform:translateX(-50%);z-index:40;background:#3a1c22;border:1px solid var(--foe);color:#ffd5da;padding:6px 12px;border-radius:8px;font-size:13px;max-width:90vw}
+pre.txt{font:11px/1.25 ui-monospace,Menlo,Consolas,monospace;overflow:auto;color:#cfd5e8;margin:0}
+
+/* ───────── setup screen ───────── */
+#setup{height:100dvh;overflow-y:auto;padding:18px 14px calc(24px + var(--safe-b));max-width:560px;margin:0 auto;
+  background:radial-gradient(120% 60% at 50% 0,#1a2140 0,transparent 70%)}
+#setup h1{margin:4px 0 2px;font-size:24px;letter-spacing:.5px}
+#setup .sub{color:var(--mut);margin:0 0 16px;font-size:13px}
+.slots{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.slot{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;cursor:pointer;text-align:center}
+.slot .lbl{font-size:12px;font-weight:800;margin-bottom:8px}
+.slot.me .lbl{color:var(--me)} .slot.foe .lbl{color:var(--foe)}
+.slot .c{width:100%;max-width:120px;margin:0 auto 8px;cursor:pointer}
+.slot .dn{font-weight:800;font-size:14px}
+.slot .ds{color:var(--mut);font-size:11.5px;min-height:15px}
+.slot .chg{display:inline-block;margin-top:6px;font-size:12px;color:var(--gold)}
+.lv{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:6px}
+.lv button{padding:10px 2px;border-radius:10px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-weight:700}
+.lv button.on{border-color:var(--gold);background:#2a2412;color:var(--gold)}
+.lvd{color:var(--mut);font-size:12.5px;min-height:34px;margin-bottom:12px}
+#setup h4{margin:14px 0 8px;font-size:13px;color:var(--mut)}
+.err{background:#3a1c22;border:1px solid var(--foe);color:#ffd5da;border-radius:10px;padding:8px 10px;margin-bottom:10px;font-size:12.5px;word-break:break-word}
+.go-btn{width:100%;min-height:54px;font-size:17px}
+.picker{width:100%;max-width:560px;height:86dvh;background:var(--panel);border:1px solid var(--line);border-radius:16px 16px 0 0;display:flex;flex-direction:column}
+.picker header{display:flex;gap:8px;padding:12px;border-bottom:1px solid var(--line)}
+.picker input{flex:1;min-width:0;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg2);color:var(--text);font:inherit}
+.grid{overflow:auto;padding:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-content:start}
+.tile{cursor:pointer;text-align:center;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px}
+.tile.on{border-color:var(--gold)}
+.tile .c{width:100%;margin-bottom:4px}
+.tile .tn{font-size:11.5px;font-weight:700;line-height:1.2}
+.tile .ts{font-size:10px;color:var(--mut)}
 </style>
 </head>
 <body>
-<div id="app">
-  <header>
-    <span id="dot" title="연결 상태"></span>
-    <span id="turn">연결 중…</span>
-    <span id="score"></span>
-  </header>
-  <main id="main"></main>
-  <footer>
-    <div id="status"></div>
-    <div id="prompt" hidden></div>
-    <div id="acts"></div>
-  </footer>
+
+<div id="setup" class="hide"></div>
+
+<div id="app" class="hide">
+  <div class="top">
+    <span id="dot" class="dot"></span>
+    <span id="turn" class="turn">연결 중…</span>
+    <button class="ibtn" id="menuBtn">메뉴</button>
+  </div>
+  <div class="board" id="board"></div>
+  <div class="hand" id="hand"></div>
+  <div class="actbar" id="actbar"></div>
 </div>
-<div id="modal"><img id="mimg" alt=""><div class="cap" id="mcap"></div><small>화면을 누르면 닫혀요</small></div>
-<div id="toast"></div>
+
+<div id="layer"></div>
+<div id="toast" class="toast hide"></div>
 
 <script>
 (() => {
-  'use strict';
-  const $ = id => document.getElementById(id);
-  const IMG = {};                 // card name -> image url
-  let NAMES = [];                 // card names, longest first
-  let frame = null;               // last decision/state frame
-  let me = 'P1';
-  let pending = false;            // a choose was sent and not yet answered
-  let ws = null, retry = 0;
+'use strict';
+const $ = id => document.getElementById(id);
+const IMG = {};                               // card name -> image URL
+const LEVELS = [
+  ['easy',   '쉬움',   '아무 행동이나 고르는 AI예요. 규칙 연습용으로 좋아요.'],
+  ['normal', '보통',   '조금 앞을 내다보며 두는 AI예요. (탐색 50회)'],
+  ['hard',   '어려움', '꽤 신중하게 두는 AI예요. (탐색 200회)'],
+  ['expert', '최상',   '가장 강한 단계예요. 한 수에 몇 초 걸릴 수 있어요. (탐색 500회)'],
+];
+// All AI levels play fair: they do not see your hand.
+const RUNE_COLOR = {Fury:'#e5484d', Calm:'#3ecf8e', Mind:'#4f9dff', Body:'#f5963b', Chaos:'#b36bff', Order:'#f2d04b'};
 
-  // Tiny DOM helper: h('div', {class:'x', onclick:fn}, child, 'text')
-  function h(tag, attrs, ...kids) {
-    const e = document.createElement(tag);
-    for (const [k, v] of Object.entries(attrs || {})) {
-      if (v === false || v == null) continue;
-      if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
-      else if (k === 'class') e.className = v;
-      else e.setAttribute(k, v === true ? '' : v);
+const S = {
+  decks: [], picks: {deck1: null, deck2: null, level: 'normal'},
+  me: 'P1', frame: null, pending: false, over: false,
+  cfg: null, sel: null, sheet: null, mull: [],
+  ws: null, retry: 0, started: false,
+};
+
+// ───────── tiny helpers ─────────
+function h(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === false || v == null) continue;
+    if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (k === 'class') e.className = v;
+    else if (k === 'style') e.style.cssText = v;
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat(Infinity)) if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(String(c)));
+  return e;
+}
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} },
+};
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  return r.json();
+}
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.remove('hide');
+  clearTimeout(toast.id); toast.id = setTimeout(() => t.classList.add('hide'), 3500);
+}
+// Legends are stored in the gallery by title only ("Grand Duelist"), decks say "Fiora, Grand Duelist".
+const imgFor = n => IMG[n] || (n && n.includes(', ') ? IMG[n.split(', ').slice(1).join(', ')] : undefined);
+const other = p => (p === 'P1' ? 'P2' : 'P1');
+const pretty = s => s.replace(/\(obj=\d+\)/g, '').replace(/ #\d+/g, '').replace(/\s+/g, ' ').trim();
+
+function cardEl(o, opt = {}) {
+  const url = imgFor(o.name);
+  const c = h('div', {class: 'c' + (opt.big ? ' big' : '') + (o.exhausted ? ' ex' : '') + (opt.can ? ' can' : '') +
+    (opt.sel ? ' sel' : '') + (opt.mull ? ' mull' : '') + (opt.side ? ' ' + opt.side : ''), title: o.name,
+    onclick: opt.onclick || (() => openCard(o))});
+  if (url) {
+    const img = h('img', {src: url, alt: o.name, loading: 'lazy', decoding: 'async', draggable: 'false'});
+    img.addEventListener('error', () => { img.remove(); c.append(h('span', {class: 'nm'}, o.name)); });
+    c.append(img);
+  } else c.append(h('span', {class: 'nm'}, o.name));
+  if (o.might) c.append(h('span', {class: 'mt'}, o.might));
+  if (o.damage) c.append(h('span', {class: 'dm'}, '-' + o.damage));
+  if (opt.count > 1) c.append(h('span', {class: 'cnt'}, opt.count));
+  return c;
+}
+
+// ───────── model: what can I do right now? ─────────
+function kindOf(a) { return ((a.type || '').match(/^P\d:\s*(\w+)/) || [])[1] || ''; }
+
+function buildModel(f) {
+  const me = S.me, idx = new Map(), vis = [];        // vis: my visible cards (name fallback)
+  const add = (o, mine) => { if (o && o.id != null) { idx.set(o.id, o); if (mine) vis.push(o); } };
+  for (const p of ['P1', 'P2']) {
+    const z = (f.zones || {})[p] || {};
+    for (const k of ['hand', 'base', 'trash', 'banishment']) (z[k] || []).forEach(o => add(o, p === me && k !== 'trash'));
+  }
+  for (const b of (f.battlefields || [])) (b.units || []).forEach(o => add(o, o.controller === me));
+  const champ = champInfo(f, me);
+  const m = {idx, byObj: new Map(), champ: [], bar: [], choice: [], mull: [], other: [], all: [], champName: champ && champ.name};
+  const attach = (key, p) => { if (!m.byObj.has(key)) m.byObj.set(key, []); m.byObj.get(key).push(p); };
+  const legal = f.type === 'decision' ? (f.legal || []) : [];
+  for (const a of legal) {
+    const k = kindOf(a), p = {a, kind: k, label: a.label};
+    m.all.push(p);
+    if (k === 'EndTurn' || k === 'PassPriority' || k === 'PassFocus') { m.bar.push(p); continue; }
+    if (k === 'MulliganDecision') { m.mull.push(p); continue; }
+    if (k === 'MakeChoice' || k === 'AssignCombatDamage') {
+      const om = a.label.match(/\(obj=(\d+)\)/); p.obj = om ? idx.get(+om[1]) : null;
+      m.choice.push(p); continue;
     }
-    for (const c of kids.flat()) if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(String(c)));
-    return e;
-  }
-
-  // ── Card images ──────────────────────────────────────────────────────────
-  // The server injects name->image URL into the stock page; reuse it.
-  async function loadImages() {
-    try {
-      const t = await (await fetch('/classic', {cache:'force-cache'})).text();
-      const i = t.indexOf('const CARD_IMAGES = ');
-      if (i < 0) return;
-      const s = i + 'const CARD_IMAGES = '.length;
-      const e = t.indexOf(';\n', s);
-      Object.assign(IMG, JSON.parse(t.slice(s, e)));
-      NAMES = Object.keys(IMG).sort((a, b) => b.length - a.length);
-      if (frame) render();
-    } catch (_) { /* images are optional */ }
-  }
-
-  function cardEl(o, big) {
-    const url = IMG[o.name];
-    const c = h('div', {class: 'card' + (big ? ' big' : '') + (o.exhausted ? ' ex' : '') + (url ? '' : ' noimg') +
-      (o.controller ? (o.controller === me ? ' deco-me' : ' deco-foe') : ''), onclick: () => preview(o)});
-    if (url) {
-      const img = h('img', {src: url, alt: o.name, loading: 'lazy', decoding: 'async'});
-      img.addEventListener('error', () => { img.remove(); c.classList.add('noimg'); });
-      c.append(img);
+    let obj = null, name = null;
+    if (k === 'PlayCard' || k === 'PlayReaction') {
+      obj = idx.get(a.card_object_id);
+      name = (a.label.match(/^Play (.+?) #\d+/) || [])[1];
+      p.dest = (a.label.match(/->\s*(.+)$/) || [])[1];
+    } else if (k === 'ActivateAbility') {
+      obj = idx.get(a.ability_source);
+      name = (a.label.match(/^Activate (.+?) #\d+/) || [])[1];
+      p.target = (a.label.match(/@\s*(.+)$/) || [])[1];
+      if (p.target) p.target = pretty(p.target);
+    } else if (k === 'StandardMove') {
+      const mm = a.label.match(/^Move (.+?) #\d+ -> (.+)$/);
+      name = mm && mm[1]; p.dest = mm && mm[2];
+      const units = vis.filter(o => o.name === name && o.id != null && !(((f.zones||{})[me]||{}).hand||[]).includes(o));
+      if (units.length) { units.forEach(u => attach(u.id, p)); continue; }
     }
-    c.append(h('span', {class: 'nm'}, o.name));
-    if (o.might) c.append(h('span', {class: 'b might', title: 'Might'}, o.might));
-    if (o.damage) c.append(h('span', {class: 'b dmg', title: '피해'}, '-' + o.damage));
-    if (o.exhausted) c.append(h('span', {class: 'exh'}, '탭됨'));
-    return c;
+    if (obj && obj.id != null) { attach(obj.id, p); continue; }
+    if (name && champ && champ.name === name) { m.champ.push(p); continue; }
+    const byName = name && vis.find(o => o.name === name);
+    if (byName) { attach(byName.id, p); continue; }
+    m.other.push(p);
   }
+  m.cardBound = [...m.byObj.values()].reduce((n, v) => n + v.length, 0) + m.champ.length;
+  m.mode = m.mull.length ? 'mull' : (m.choice.length && !m.cardBound && !m.bar.length ? 'choice' : (legal.length ? 'main' : 'wait'));
+  return m;
+}
 
-  function preview(o) {
-    const url = IMG[o.name];
-    $('mimg').style.display = url ? '' : 'none';
-    if (url) $('mimg').src = url;
-    $('mcap').textContent = o.name + (o.might ? '  ·  Might ' + o.might : '') + (o.damage ? '  ·  피해 ' + o.damage : '');
-    $('modal').classList.add('show');
+function champInfo(f, who) {
+  // legend / champion are not in `zones`; read them from the text board.
+  const t = f.render_text || '';
+  const lines = t.split('\n');
+  const i = lines.findIndex(l => l.startsWith('| ' + who + ' '));
+  const out = {legend: null, champ: null, name: null, ready: false};
+  if (i < 0) return out;
+  const cfg = S.cfg && S.deckOf(who);
+  out.legend = cfg ? cfg.legend : null;
+  for (let j = i; j < Math.min(i + 4, lines.length); j++) {
+    const m = lines[j].match(/Champion Zone:\s+(.+?)\s+\[([^\]]*)\]/);
+    if (m) { out.name = m[1]; out.ready = /READY/.test(m[2]); }
   }
-  $('modal').addEventListener('click', () => $('modal').classList.remove('show'));
+  out.champ = out.name;
+  return out;
+}
 
-  function row(objs, big) {
-    const r = h('div', {class: 'row' + (objs.length ? '' : ' empty')});
-    for (const o of objs) r.append(cardEl(o, big));
-    return r;
+// ───────── game rendering ─────────
+function render() {
+  const f = S.frame; if (!f) return;
+  const m = buildModel(f), t = f.turn || {}, me = S.me, foe = other(me);
+  S.model = m;
+  const keep = {};
+  document.querySelectorAll('[data-k]').forEach(e => keep[e.dataset.k] = e.scrollLeft);
+
+  const mineTurn = t.turn_player === me;
+  $('turn').replaceChildren(h('b', {}, '턴 ' + (t.turn_number ?? '-')), ' · ' + (t.phase_name || ''), ' · ',
+    h('span', {class: mineTurn ? 'who-me' : 'who-foe'}, mineTurn ? '내 턴' : '상대 턴'));
+
+  const board = $('board');
+  board.replaceChildren(sideEl(f, m, foe, false), bfsEl(f, m), sideEl(f, m, me, true));
+  const hand = $('hand'), z = (f.zones || {})[me] || {};
+  hand.replaceChildren();
+  hand.dataset.k = 'hand';
+  const cards = z.hand || [];
+  if (!cards.length) hand.append(h('div', {class: 'empty'}, '손패 없음'));
+  for (const o of cards) {
+    const acts = m.byObj.get(o.id) || [];
+    const inMull = m.mode === 'mull';
+    hand.append(cardEl(o, {big: true, can: !inMull && acts.length > 0, side: 'mine', mull: inMull && S.mull.includes(o.id),
+      sel: S.sel && S.sel.id === o.id, count: acts.length,
+      onclick: () => inMull ? toggleMull(o) : openCard(o)}));
   }
+  document.querySelectorAll('[data-k]').forEach(e => { if (keep[e.dataset.k] != null) e.scrollLeft = keep[e.dataset.k]; });
+  renderBar(f, m);
+  if (S.over) { if (!S.overShown) showOver(); else closeLayer(); }
+  else if (S.sel) openCard(S.sel, true);
+  else if (S.sheet === 'all') openAll(m, true);
+  else if (m.mode === 'choice' && S.sheet !== 'closed') openChoice(m);
+  else closeLayer();
+}
 
-  const lane = (label, objs, big) => h('div', {class: 'lane'}, h('div', {class: 'lane-l'}, label), row(objs, big));
+function sideEl(f, m, who, mine) {
+  const z = (f.zones || {})[who] || {}, t = f.turn || {};
+  const score = t[who.toLowerCase() + '_score'] ?? 0, goal = t.victory_score || 8;
+  const info = champInfo(f, who);
+  const runes = (z.base || []).filter(o => /Rune$/.test(o.name));
+  const units = (z.base || []).filter(o => !/Rune$/.test(o.name));
+  const pic = h('div', {class: 'pic'});
+  const dk = S.deckOf(who);
+  if (dk && dk.legend) pic.append(cardEl({name: dk.legend}, {side: mine ? 'mine' : 'foe'}));
+  if (info.name) {
+    const acts = mine ? m.champ : [];
+    pic.append(cardEl({name: info.name}, {can: acts.length > 0, side: mine ? 'mine' : 'foe', count: acts.length,
+      onclick: () => openCard({name: info.name, champ: true})}));
+  }
+  const band = h('div', {class: 'band'}, pic,
+    h('div', {class: 'nameblk'},
+      h('div', {class: 'pname ' + (mine ? 'me' : 'foe')}, mine ? '나' : '상대', ' ',
+        h('span', {style: 'color:var(--mut);font-weight:500;font-size:11px'}, dk ? dk.champion : who)),
+      h('div', {class: 'pip'}, h('div', {class: 'bar8'}, h('i', {style: 'width:' + Math.min(100, score / goal * 100) + '%'})),
+        h('span', {}, score + '/' + goal))),
+    h('div', {class: 'res'},
+      mine ? chip('손패', z.hand_count ?? (z.hand || []).length) : backs(z.hand_count ?? 0),
+      chip('덱', z.main_deck_count ?? '?'), chip('E', z.energy ?? 0), chip('P', z.power_total ?? 0)));
+  const rn = h('div', {class: 'runes'}, runes.map(r => h('span', {class: 'rune' + (r.exhausted ? ' ex' : ''),
+    title: r.name, style: 'background:' + (RUNE_COLOR[r.name.replace(/ Rune$/, '')] || '#8f98b3')})),
+    chip('룬덱', z.rune_deck_count ?? '?'));
+  const lane = h('div', {class: 'lane' + (units.length ? '' : ' empty'), 'data-k': 'base-' + who});
+  if (!units.length) lane.append(h('span', {class: 'none'}, '기지에 유닛 없음'));
+  for (const o of units) {
+    const acts = mine ? (m.byObj.get(o.id) || []) : [];
+    lane.append(cardEl(o, {can: acts.length > 0, side: mine ? 'mine' : 'foe', count: acts.length,
+      sel: S.sel && S.sel.id === o.id}));
+  }
+  const side = h('div', {class: 'side'});
+  if (mine) side.append(lane, h('div', {style: 'display:flex;justify-content:space-between;align-items:center;margin:2px 0 4px'}, rn), band);
+  else side.append(band, h('div', {style: 'display:flex;margin-bottom:2px'}, rn), lane);
+  return side;
+}
+function chip(k, v) { return h('span', {class: 'chip'}, k + ' ', h('b', {}, v)); }
+function backs(n) {
+  const w = h('div', {style: 'display:flex;align-items:center;padding-right:2px', title: '손패 ' + n + '장'});
+  for (let i = 0; i < Math.min(n, 9); i++) w.append(h('div', {class: 'back'}));
+  w.append(h('span', {class: 'chip', style: 'margin-left:4px'}, h('b', {}, n)));
+  return w;
+}
 
-  // ── Rendering ────────────────────────────────────────────────────────────
-  const other = p => (p === 'P1' ? 'P2' : 'P1');
-  const chip = (k, v) => h('span', {class: 'chip'}, k + ' ', h('b', {}, v));
-
-  function legendChampion(text, who) {
-    // The zones object has no legend/champion; pull them from the text board.
-    const out = [];
-    if (!text) return out;
-    const lines = text.split('\n');
-    const start = lines.findIndex(l => l.startsWith('| ' + who + ' '));
-    if (start < 0) return out;
-    for (let i = start; i < Math.min(start + 4, lines.length); i++) {
-      const m = lines[i].match(/(Legend|Champion) Zone:\s+(.+?)\s+\[/);
-      if (m) out.push(m[1] + ': ' + m[2]);
+function bfsEl(f, m) {
+  const me = S.me, wrap = h('div', {class: 'bfs'});
+  for (const b of (f.battlefields || [])) {
+    const cls = b.controller === 'none' ? 'none' : (b.controller === me ? 'me' : 'foe');
+    const lab = cls === 'none' ? '미점령' : cls === 'me' ? '내가 점령' : '상대 점령';
+    const el = h('div', {class: 'bf c-' + cls});
+    const img = imgFor(b.name.replace(/\s*\(.*\)$/, ''));
+    if (img) el.style.setProperty('--bgimg', 'url("' + img + '")');
+    el.append(h('div', {class: 'bfh'}, h('span', {}, b.name), h('span', {class: 'tag ' + cls}, lab)));
+    for (const mineRow of [false, true]) {
+      const units = (b.units || []).filter(u => (u.controller === me) === mineRow);
+      const lane = h('div', {class: 'lane', 'data-k': 'bf' + b.id + (mineRow ? 'm' : 'f')});
+      if (!units.length) lane.append(h('span', {class: 'none'}, mineRow ? '내 유닛 없음' : '상대 유닛 없음'));
+      for (const o of units) {
+        const acts = mineRow ? (m.byObj.get(o.id) || []) : [];
+        lane.append(cardEl(o, {can: acts.length > 0, side: mineRow ? 'mine' : 'foe', count: acts.length}));
+      }
+      el.append(lane);
     }
-    return out;
+    wrap.append(el);
   }
+  return wrap;
+}
 
-  function playerPanel(m, who, mine) {
-    const z = (m.zones || {})[who] || {};
-    const sec = h('section');
-    sec.append(h('div', {class: 'sec-h ' + (mine ? 'me-h' : 'foe-h')},
-      (mine ? '나' : '상대') + ' (' + who + ')',
-      h('span', {class: 'tag'}, (m.turn && m.turn.turn_player === who) ? '이번 턴' : '')));
-    const chips = h('div', {class: 'chips'},
-      chip('손패', z.hand_count ?? (z.hand || []).length), chip('덱', z.main_deck_count ?? '?'),
-      chip('룬덱', z.rune_deck_count ?? '?'), chip('에너지', z.energy ?? 0), chip('파워', z.power_total ?? 0));
-    sec.append(chips);
-    const lc = legendChampion(m.render_text, who);
-    if (lc.length) sec.append(h('div', {class: 'chips'}, lc.map(t => h('span', {class: 'chip'}, t))));
-    sec.append(lane('기지', z.base || [], false));
-    if (mine) sec.append(lane('손패', z.hand || [], true));
-    else if ((z.hand || []).length) sec.append(lane('손패', z.hand, false));
-    return sec;
+function renderBar(f, m) {
+  const bar = $('actbar'); bar.replaceChildren();
+  if (S.over) { bar.append(h('div', {class: 'status'}, '게임이 끝났어요'),
+    h('button', {class: 'btn pri', onclick: gotoSetup}, '새 게임')); return; }
+  if (m.mode === 'wait' || !m.all.length) {
+    bar.append(h('div', {class: 'status'}, h('span', {class: 'spin'}), f.engine_busy ? '상대가 생각하는 중…' : '기다리는 중…'));
+    return;
   }
-
-  function battlefields(m) {
-    const sec = h('section', {}, h('div', {class: 'sec-h'}, '전장'));
-    for (const b of (m.battlefields || [])) {
-      const cls = b.controller === 'none' ? 'ctl-none' : (b.controller === me ? 'ctl-me' : 'ctl-foe');
-      const lab = b.controller === 'none' ? '미점령' : (b.controller === me ? '내가 점령' : '상대 점령');
-      const units = b.units || [];
-      sec.append(h('div', {class: 'bf'},
-        h('div', {class: 'bf-h'}, h('b', {}, b.name), h('span', {class: cls}, lab)),
-        lane('상대', units.filter(u => u.controller !== me), false),
-        lane('나', units.filter(u => u.controller === me), false)));
-    }
-    return sec;
+  if (m.mode === 'mull') {
+    const n = S.mull.length;
+    bar.append(h('div', {class: 'status go'}, '교체할 카드를 고르세요 (최대 2장)'),
+      h('button', {class: 'btn go', disabled: S.pending, onclick: () => confirmMull(m)},
+        n ? n + '장 교체' : '그대로 시작'));
+    return;
   }
-
-  function index(m) {
-    const idx = new Map();
-    const add = o => { if (o && o.id != null) idx.set(o.id, o); };
-    for (const p of ['P1', 'P2']) {
-      const z = (m.zones || {})[p] || {};
-      for (const k of ['hand', 'base', 'trash', 'banishment', 'main_deck', 'rune_deck']) (z[k] || []).forEach(add);
-    }
-    for (const b of (m.battlefields || [])) (b.units || []).forEach(add);
-    return idx;
+  bar.append(h('div', {class: 'status go'}, S.pending ? '처리 중…' : (m.mode === 'choice' ? '선택이 필요해요' : '내 차례')),
+    h('button', {class: 'btn', onclick: () => { S.sel = null; S.sheet = 'all'; render(); }}, '모든 행동 ' + m.all.length));
+  const order = {PassFocus: 0, PassPriority: 0, EndTurn: 1};
+  for (const p of m.bar.slice().sort((a, b) => order[a.kind] - order[b.kind])) {
+    bar.append(h('button', {class: 'btn ' + (p.kind === 'EndTurn' ? 'pri' : ''), disabled: S.pending,
+      onclick: () => doChoose(p)}, barLabel(p)));
   }
+}
+const barLabel = p => ({EndTurn: '턴 종료', PassPriority: '패스', PassFocus: '패스'}[p.kind] || pretty(p.label));
 
-  function actionCard(a, idx) {
-    if (a.card_object_id != null && idx.has(a.card_object_id)) return idx.get(a.card_object_id).name;
-    return NAMES.find(n => a.label.includes(n)) || null;
+// ───────── layers (sheets) ─────────
+function layer(content, opts = {}) {
+  const l = $('layer');
+  l.replaceChildren(h('div', {class: 'shade' + (opts.center ? ' center' : ''), onclick: e => {
+    if (e.target === e.currentTarget && opts.onclose !== false) { (opts.onclose || closeAndRender)(); }
+  }}, content));
+}
+function closeLayer() { $('layer').replaceChildren(); }
+function closeAndRender() { S.sel = null; S.sheet = S.model && S.model.mode === 'choice' ? 'closed' : null; closeLayer(); render(); }
+
+function actLabel(p) {
+  switch (p.kind) {
+    case 'PlayCard': return p.dest ? (p.dest === 'Base' ? '기지에 내기' : p.dest + '에 내기') : '내기';
+    case 'PlayReaction': return '반응으로 내기';
+    case 'ActivateAbility': return '능력 발동' + (p.target ? ' → ' + p.target : '');
+    case 'StandardMove': return '이동 → ' + p.dest;
+    default: return pretty(p.label);
   }
+}
+function actBtn(p, extra) {
+  const url = p.obj && imgFor(p.obj.name);
+  return h('button', {class: 'act' + (p.kind === 'EndTurn' ? ' end' : ''), disabled: S.pending, onclick: () => doChoose(p)},
+    url && h('img', {src: url, alt: ''}), h('span', {}, extra || actLabel(p)));
+}
 
-  function renderActions(m) {
-    const acts = $('acts'), status = $('status'), prompt = $('prompt');
-    acts.replaceChildren(); prompt.hidden = true; status.className = ''; status.replaceChildren();
-    if (m.game_over) {
-      const won = m.winner === me, draw = !m.winner || m.winner === 'none';
-      status.append(h('div', {class: 'banner ' + (draw ? '' : won ? 'win' : 'lose')},
-        draw ? '게임 종료' : won ? '승리!' : '패배'), m.game_over_reason || '');
-      return;
-    }
-    const legal = m.type === 'decision' ? (m.legal || []) : [];
-    if (!legal.length) {
-      status.append(h('span', {class: 'spin'}), m.engine_busy ? '상대/엔진이 진행 중…' : '대기 중…');
-      return;
-    }
-    status.className = 'me';
-    status.textContent = pending ? '처리 중…' : '내 선택 차례 · ' + legal.length + '개 선택지';
-    if (m.prompt) { prompt.textContent = m.prompt; prompt.hidden = false; }
-    const idx = index(m);
-    const sorted = legal.slice().sort((a, b) => (/EndTurn|Pass/i.test(a.type) ? 1 : 0) - (/EndTurn|Pass/i.test(b.type) ? 1 : 0));
-    for (const a of sorted) {
-      const nm = actionCard(a, idx), url = nm && IMG[nm];
-      acts.append(h('button', {class: 'act' + (/EndTurn/i.test(a.type) ? ' end' : ''), disabled: pending,
-        onclick: () => choose(m, a)}, url && h('img', {src: url, alt: '', loading: 'lazy'}), h('span', {class: 't'}, a.label)));
-    }
-  }
+function openCard(o, silent) {
+  const m = S.model || buildModel(S.frame);
+  const acts = o.champ ? m.champ : (m.byObj.get(o.id) || []);
+  S.sel = o;
+  const url = imgFor(o.name);
+  const live = o.id != null ? m.idx.get(o.id) || o : o;
+  const stats = [live.might ? 'Might ' + live.might : null, live.damage ? '피해 ' + live.damage : null, live.exhausted ? '탭됨(사용함)' : null].filter(Boolean).join(' · ');
+  const ci = h('div', {class: 'c big', onclick: () => zoom(o)}, url ? h('img', {src: url, alt: o.name}) : h('span', {class: 'nm'}, o.name));
+  layer(h('div', {class: 'sheet'},
+    h('div', {class: 'cardrow'}, ci, h('div', {class: 'info'}, h('b', {}, o.name), h('div', {}, stats || ' '),
+      h('div', {}, acts.length ? '할 수 있는 행동 ' + acts.length + '개' : '지금은 할 수 있는 행동이 없어요'), h('div', {}, '카드를 누르면 크게 볼 수 있어요'))),
+    h('div', {class: 'acts'}, acts.map(p => actBtn(p)))), {});
+}
+function zoom(o) {
+  const url = imgFor(o.name);
+  layer(h('div', {class: 'zoom', style: 'display:flex;width:100%'}, url ? h('img', {src: url, alt: o.name}) : h('div', {}, o.name),
+    h('div', {style: 'font-weight:700'}, o.name)), {center: true, onclose: () => { S.sel ? openCard(S.sel, true) : closeLayer(); }});
+}
+function openAll(m) {
+  layer(h('div', {class: 'sheet'}, h('h3', {}, '모든 행동'),
+    h('div', {class: 'acts'}, m.all.map(p => actBtn(p, pretty(p.label))))), {});
+}
+function openChoice(m) {
+  const f = S.frame;
+  layer(h('div', {class: 'sheet'}, f.prompt && h('div', {class: 'prompt'}, f.prompt), h('h3', {}, '선택하세요'),
+    h('div', {class: 'acts'}, m.choice.map(p => actBtn(p, pretty(p.label))))), {});
+}
+function showOver() {
+  const f = S.frame, won = f.winner === S.me, draw = !f.winner || f.winner === 'none';
+  layer(h('div', {class: 'msg ' + (draw ? '' : won ? 'win' : 'lose')}, h('h2', {}, draw ? '게임 종료' : won ? '승리!' : '패배'),
+    h('div', {style: 'color:var(--mut);margin-bottom:8px'}, f.game_over_reason || ''),
+    h('button', {class: 'btn pri', onclick: gotoSetup}, '새 게임'),
+    h('button', {class: 'btn', onclick: () => { closeLayer(); S.overShown = true; }}, '보드 보기')),
+    {center: true, onclose: false});
+}
 
-  function render() {
-    const m = frame; if (!m) return;
-    const t = m.turn || {};
-    $('turn').textContent = t.turn_number != null ? ('턴 ' + t.turn_number + ' · ' + (t.phase_name || '') + ' · ' +
-      (t.turn_player === me ? '내 턴' : '상대 턴')) : '';
-    const mine = t[me.toLowerCase() + '_score'], theirs = t[other(me).toLowerCase() + '_score'];
-    $('score').replaceChildren(h('span', {class: 'me'}, mine ?? 0), ' : ', h('span', {class: 'foe'}, theirs ?? 0),
-      h('span', {style: 'color:var(--mut);font-weight:400;font-size:12px'}, ' /' + (t.victory_score ?? 8)));
-    const main = $('main'), keep = main.scrollTop;
-    main.replaceChildren(
-      playerPanel(m, other(me), false), battlefields(m), playerPanel(m, me, true),
-      h('section', {}, h('details', {}, h('summary', {}, '텍스트 보드 보기'), h('pre', {}, m.render_text || '')),
-        h('div', {style: 'margin-top:8px'}, h('a', {class: 'classic', href: '/classic'}, '기존(PC용) 화면으로 열기'))));
-    main.scrollTop = keep;
-    renderActions(m);
-  }
+// ───────── mulligan ─────────
+function toggleMull(o) {
+  const i = S.mull.indexOf(o.id);
+  if (i >= 0) S.mull.splice(i, 1); else if (S.mull.length < 2) S.mull.push(o.id); else toast('최대 2장까지 교체할 수 있어요');
+  render();
+}
+function mullNames(p) {
+  return p.label.replace(/^Mull:\s*/, '').split(/\s*#\d+\s*/).map(s => s.trim()).filter(Boolean).sort().join('|');
+}
+function confirmMull(m) {
+  const z = (S.frame.zones || {})[S.me] || {};
+  const names = S.mull.map(id => (z.hand || []).find(o => o.id === id)).filter(Boolean).map(o => o.name).sort().join('|');
+  const p = names ? m.mull.find(x => x.label !== 'Keep hand' && mullNames(x) === names) : m.mull.find(x => /^Keep/.test(x.label));
+  if (!p) { toast('그 조합은 선택할 수 없어요'); return; }
+  S.mull = []; doChoose(p);
+}
 
-  // ── Networking ───────────────────────────────────────────────────────────
-  function toast(msg) {
-    const t = $('toast'); t.textContent = msg; t.style.display = 'block';
-    clearTimeout(toast.id); toast.id = setTimeout(() => (t.style.display = 'none'), 3500);
-  }
+// ───────── networking ─────────
+function doChoose(p) {
+  const f = S.frame;
+  if (S.pending || !S.ws || S.ws.readyState !== 1) return;
+  if (p.kind === 'EndTurn' && !confirm('턴을 종료할까요?')) return;
+  S.pending = true; S.sel = null; S.sheet = null;
+  S.ws.send(JSON.stringify({type: 'choose', player: f.player, index: p.a.index, decision_id: f.decision_id}));
+  closeLayer(); render();
+}
+function connect() {
+  if (S.ws) { S.ws.onclose = null; try { S.ws.close(); } catch (_) {} }
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const ws = S.ws = new WebSocket(proto + '//' + location.host + '/ws');
+  ws.onopen = () => { S.retry = 0; $('dot').classList.add('on'); ws.send('{"type":"request_state"}'); };
+  ws.onclose = async () => {
+    $('dot').classList.remove('on');
+    if (S.ws !== ws || S.over) return;
+    let st = null; try { st = await api('/api/status'); } catch (_) {}
+    if (S.ws !== ws) return;
+    if (st && st.state === 'running') { setTimeout(connect, Math.min(1000 * ++S.retry, 5000)); return; }
+    if (st) { toast('게임이 종료됐어요'); gotoSetup(); } else setTimeout(connect, 2000);
+  };
+  ws.onmessage = ev => {
+    let m; try { m = JSON.parse(ev.data); } catch (_) { return; }
+    if (m.type === 'decision' || m.type === 'state') {
+      if (m.type === 'decision' && m.legal && m.legal.length) S.me = m.player || S.me;
+      if (!S.frame || m.decision_id !== S.frame.decision_id) { S.mull = []; S.sel = null; S.sheet = null; }
+      S.pending = false; S.frame = m;
+      if (m.game_over) S.over = true;
+      render();
+    } else if (m.type === 'err') { S.pending = false; toast(m.msg || '오류'); render(); }
+  };
+}
 
-  function choose(m, a) {
-    if (pending || !ws || ws.readyState !== 1) return;
-    if (/EndTurn/i.test(a.type) && !confirm('턴을 종료할까요?')) return;
-    pending = true;
-    ws.send(JSON.stringify({type: 'choose', player: m.player, index: a.index, decision_id: m.decision_id}));
-    renderActions(m);
-  }
+// ───────── setup screen ─────────
+S.deckOf = who => {
+  if (!S.cfg) return null;
+  const id = who === 'P1' ? S.cfg.deck1 : S.cfg.deck2;
+  return S.decks.find(d => d.id === id) || null;
+};
+const deckById = id => S.decks.find(d => d.id === id);
 
-  function connect() {
-    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    ws = new WebSocket(proto + '//' + location.host + '/ws' + location.search);
-    ws.onopen = () => { retry = 0; $('dot').classList.add('on'); ws.send('{"type":"request_state"}'); };
-    ws.onclose = () => {
-      $('dot').classList.remove('on'); $('turn').textContent = '연결이 끊겼어요, 다시 연결 중…';
-      setTimeout(connect, Math.min(1000 * ++retry, 5000));
-    };
-    ws.onmessage = ev => {
-      let m; try { m = JSON.parse(ev.data); } catch (_) { return; }
-      if (m.type === 'decision' || m.type === 'state') {
-        if (m.type === 'decision' && m.legal && m.legal.length) me = m.player || me;
-        pending = false; frame = m; render();
-      } else if (m.type === 'err') { pending = false; toast(m.msg || '오류'); if (frame) render(); }
-    };
-  }
-
-  loadImages();
+function deckTile(d, label, cls) {
+  return h('div', {class: 'slot ' + cls, onclick: () => pickDeck(label === '내 덱' ? 'deck1' : 'deck2')},
+    h('div', {class: 'lbl'}, label),
+    d ? cardEl({name: d.champion}, {onclick: () => {}}) : h('div', {class: 'c'}),
+    h('div', {class: 'dn'}, d ? d.champion : '선택하세요'), h('div', {class: 'ds'}, d ? d.legend : ''),
+    h('span', {class: 'chg'}, '덱 바꾸기'));
+}
+function renderSetup(err, running) {
+  $('app').classList.add('hide'); $('setup').classList.remove('hide'); closeLayer();
+  const P = S.picks, lv = LEVELS.find(l => l[0] === P.level) || LEVELS[1];
+  const root = $('setup'); root.replaceChildren(...[
+    h('h1', {}, 'Riftbound'), h('p', {class: 'sub'}, '덱과 상대 AI를 고르고 게임을 시작하세요.'),
+    err && h('div', {class: 'err'}, err),
+    h('div', {class: 'slots'}, deckTile(deckById(P.deck1), '내 덱', 'me'), deckTile(deckById(P.deck2), '상대 덱', 'foe')),
+    h('div', {style: 'display:flex;justify-content:flex-end;margin:-8px 0 10px'},
+      h('button', {class: 'btn', style: 'min-height:34px;font-size:12px', onclick: () => { P.deck2 = S.decks[Math.floor(Math.random() * S.decks.length)].id; renderSetup(); }}, '상대 덱 무작위')),
+    h('h4', {}, '상대 AI 수준'),
+    h('div', {class: 'lv'}, LEVELS.map(l => h('button', {class: l[0] === P.level ? 'on' : '', onclick: () => { P.level = l[0]; renderSetup(); }}, l[1]))),
+    h('div', {class: 'lvd'}, lv[2]),
+    h('button', {class: 'btn pri go-btn', id: 'startBtn', onclick: startGame}, '게임 시작'),
+    running && h('button', {class: 'btn go-btn', style: 'margin-top:10px;min-height:46px;font-size:14px', onclick: resumeGame}, '진행 중인 게임으로 돌아가기'),
+    h('p', {class: 'sub', style: 'margin-top:14px;font-size:12px'}, '게임을 시작하면 지금 진행 중인 게임은 종료돼요. 상대 AI는 내 손패를 볼 수 없어요.')].filter(Boolean));
+}
+function pickDeck(slot) {
+  const input = h('input', {type: 'search', placeholder: '챔피언 이름 검색'});
+  const grid = h('div', {class: 'grid'});
+  const draw = () => {
+    const q = input.value.trim().toLowerCase();
+    grid.replaceChildren(...S.decks.filter(d => !q || (d.champion + d.legend + d.id).toLowerCase().includes(q)).map(d =>
+      h('div', {class: 'tile' + (S.picks[slot] === d.id ? ' on' : ''), onclick: () => { S.picks[slot] = d.id; closeLayer(); renderSetup(); }},
+        cardEl({name: d.champion}, {onclick: () => {}}), h('div', {class: 'tn'}, d.champion), h('div', {class: 'ts'}, d.legend))));
+  };
+  input.addEventListener('input', draw); draw();
+  layer(h('div', {class: 'picker'}, h('header', {}, input, h('button', {class: 'btn', onclick: closeLayer}, '닫기')), grid), {onclose: closeLayer});
+}
+async function startGame() {
+  const P = S.picks, btn = $('startBtn');
+  btn.disabled = true; btn.textContent = '게임을 준비하는 중… (몇 초 걸려요)';
+  store.set('rb.picks', JSON.stringify(P));
+  let r;
+  try { r = await api('/api/start', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(P)}); }
+  catch (e) { r = {ok: false, error: '서버에 연결하지 못했어요'}; }
+  if (!r.ok) { renderSetup('시작하지 못했어요: ' + (r.error || '알 수 없는 오류')); return; }
+  S.cfg = {deck1: P.deck1, deck2: P.deck2, level: P.level};
+  enterGame();
+}
+function resumeGame() { enterGame(); }
+function enterGame() {
+  S.frame = null; S.over = false; S.overShown = false; S.pending = false; S.sel = null; S.sheet = null; S.mull = []; S.me = 'P1';
+  $('setup').classList.add('hide'); $('app').classList.remove('hide');
+  $('turn').textContent = '게임 준비 중…'; $('board').replaceChildren(); $('hand').replaceChildren();
+  $('actbar').replaceChildren(h('div', {class: 'status'}, h('span', {class: 'spin'}), '불러오는 중…'));
   connect();
+}
+function gotoSetup() {
+  if (S.ws) { S.ws.onclose = null; try { S.ws.close(); } catch (_) {} S.ws = null; }
+  closeLayer(); renderSetup();
+}
+$('menuBtn').addEventListener('click', () => {
+  const f = S.frame;
+  layer(h('div', {class: 'sheet'}, h('h3', {}, '메뉴'), h('div', {class: 'acts'},
+    h('button', {class: 'act', onclick: () => { closeLayer(); if (confirm('지금 게임을 끝내고 새 게임을 시작할까요?')) gotoSetup(); }}, '새 게임 설정'),
+    h('button', {class: 'act', onclick: () => { layer(h('div', {class: 'sheet'}, h('h3', {}, '텍스트 보드'), h('pre', {class: 'txt'}, (f && f.render_text) || '')), {}); }}, '텍스트 보드 보기'),
+    h('button', {class: 'act', onclick: () => { location.href = '/classic'; }}, '기존(PC용) 화면 열기'))), {});
+});
+
+// ───────── boot ─────────
+(async function boot() {
+  try { Object.assign(IMG, await api('/api/images')); } catch (_) {}
+  try { S.decks = await api('/api/decks'); } catch (_) {}
+  const saved = (() => { try { return JSON.parse(store.get('rb.picks') || 'null'); } catch (_) { return null; } })();
+  const first = id => S.decks.find(d => d.id === id) ? id : null;
+  S.picks.deck1 = first(saved && saved.deck1) || first('fiora') || (S.decks[0] && S.decks[0].id);
+  S.picks.deck2 = first(saved && saved.deck2) || first('yi_rebuild') || (S.decks[1] && S.decks[1].id);
+  if (saved && LEVELS.some(l => l[0] === saved.level)) S.picks.level = saved.level;
+  let st = null; try { st = await api('/api/status'); } catch (_) {}
+  if (st && st.state === 'running' && st.config) { S.cfg = st.config; resumeGame(); }
+  else renderSetup(st && st.error ? '이전 시작 오류: ' + st.error : null);
+})();
 })();
 </script>
 </body>

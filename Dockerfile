@@ -21,7 +21,7 @@ RUN cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
 FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates nginx-light openssl libboost-program-options1.83.0 libboost-context1.83.0 \
+        ca-certificates nginx-light openssl python3 libboost-program-options1.83.0 libboost-context1.83.0 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -33,6 +33,7 @@ COPY --from=build /src/errata /app/errata
 ENV RIFTBOUND_ROOT=/app
 
 COPY deploy/entrypoint.sh /app/entrypoint.sh
+COPY deploy/launcher.py /app/launcher.py
 COPY deploy/nginx.conf.template /app/nginx.conf.template
 COPY deploy/rb_proxy.conf /etc/nginx/rb_proxy.conf
 COPY deploy/mobile /app/mobile

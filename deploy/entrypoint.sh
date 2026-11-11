@@ -1,6 +1,6 @@
 #!/bin/bash
-# Runs riftbound (loopback only) and nginx (public). If either dies, exit so
-# Fly restarts the machine.
+# nginx (public :8080) + launcher (loopback :8082, starts/stops riftbound on :8081).
+# If either dies, exit so Fly restarts the machine.
 set -u
 AUTH=""
 if [ -n "${GAME_PASSWORD:-}" ]; then
@@ -12,13 +12,11 @@ else
 fi
 sed "s|__AUTH__|$AUTH|" /app/nginx.conf.template > /etc/nginx/nginx.conf
 
-stdbuf -oL ./riftbound --agent1 human --agent2 mcts:sims=50 \
-  --deck1 decks/fiora.txt --deck2 decks/yi_rebuild.txt \
-  --bind 127.0.0.1 --port 8081 --god-mode off &
-RB=$!
+python3 -u /app/launcher.py &
+LA=$!
 nginx -g 'daemon off;' &
 NG=$!
-wait -n "$RB" "$NG"
+wait -n "$LA" "$NG"
 echo "[entrypoint] a process exited, shutting down" >&2
-kill "$RB" "$NG" 2>/dev/null
+kill "$LA" "$NG" 2>/dev/null
 exit 1

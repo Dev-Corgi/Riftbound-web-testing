@@ -5,9 +5,16 @@ Packages the [alpharune](https://github.com/chorlick/alpharune) web UI
 
 ## How it works
 
+The page at `/` is a phone-friendly card-game UI (`deploy/mobile/index.html`) with a
+start form: pick your deck, the opponent's deck and the AI level
+(easy = random, normal/hard/expert = `ismcts` with 50/200/500 simulations; these
+AIs do not see your hand). `deploy/launcher.py` (loopback `:8082`, behind nginx
+`/api/`) lists decks/images and (re)starts `riftbound` with the chosen options.
+The stock UI is still at `/classic` while a game is running.
+
 `riftbound` rejects any request whose `Host` is not an IP literal or
 `localhost`, and any WebSocket whose `Origin` is not `http://<Host>`. So the
-container runs it on `127.0.0.1:8081` (loopback => no access token) and puts
+container runs it on `127.0.0.1:8081` (started by the launcher) (loopback => no access token) and puts
 nginx on `:8080` in front, rewriting `Host`/`Origin` (`deploy/nginx.conf.template`,
 `deploy/entrypoint.sh`). Open `https://<app>.fly.dev/` directly.
 

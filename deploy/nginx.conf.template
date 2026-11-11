@@ -15,6 +15,12 @@ http {
     root /app/mobile;
     location = / { try_files /index.html =404; add_header Cache-Control "no-cache"; }
 
+    # Deck list / images / start-game control (launcher.py).
+    location /api/ {
+      proxy_pass http://127.0.0.1:8082;
+      proxy_read_timeout 60s;
+    }
+
     # Stock desktop UI, still reachable (the mobile page also reads its card-image table).
     location = /classic {
       proxy_pass http://127.0.0.1:8081/;
